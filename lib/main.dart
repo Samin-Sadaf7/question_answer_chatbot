@@ -12,7 +12,7 @@ class ChatBotApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ChatBot',
+      title: 'Viva ChatBot',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -29,14 +29,11 @@ class ChatBotScreen extends StatefulWidget {
 class _ChatBotScreenState extends State<ChatBotScreen> {
   int _currentQuestionIndex = 0;
   bool _showHint = false;
-  bool _answered = false; // Track if the current question is answered
-  bool _loading = false; // Track global loading state
+  bool _answered = false;
+  bool _loading = false;
   TextEditingController _answerController = TextEditingController();
-  ScrollController _scrollController = ScrollController();
   List<dynamic> _questions = [];
-  List<Map<String, String>> _chatMessages = [];
-  bool _showNextButton = false;
-  int? _loadingMessageIndex; // Track specific message index being loaded
+  String _feedback = '';
   SpeechToText _speechToText = SpeechToText();
   bool _speechEnabled = false;
   String _lastWords = '';
@@ -49,21 +46,12 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   }
 
   Future<void> _fetchQuestions() async {
-    print("Fetching questions...");
     final response =
         await http.get(Uri.parse('http://192.168.20.183:5500/lib/data.json'));
-    print(response);
     if (response.statusCode == 200) {
       setState(() {
         _questions = json.decode(response.body)['Questions'];
-        _chatMessages.add({
-          'no': '${_currentQuestionIndex + 1}',
-          'type': 'question',
-          'sender': 'bot',
-          'message': _questions[_currentQuestionIndex]['Question']
-        });
       });
-      _scrollToBottom();
     } else {
       throw Exception('Failed to load questions');
     }
@@ -71,22 +59,16 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
 
   Future<void> _checkAnswer(String userAnswer, String correctAnswer) async {
     setState(() {
-      _loading = true; // Show global loading indicator
-      _loadingMessageIndex = _chatMessages.length;
-      _chatMessages
-          .add({'type': 'loading', 'sender': 'bot', 'message': 'loading'});
+      _loading = true;
     });
 
     bool isCorrect = await _sendAnswerToBackend(userAnswer, correctAnswer);
 
     setState(() {
-      _answered = true; // Mark the question as answered
+      _answered = true;
       _showHint = false;
-      _showNextButton = true; // Show next button after feedback
-      _loading = false; // Hide global loading indicator
-      _loadingMessageIndex = null; // Reset loading message index
+      _loading = false;
     });
-    _scrollToBottom();
   }
 
   Future<bool> _sendAnswerToBackend(
@@ -110,57 +92,38 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
         Map<String, dynamic> responseData = jsonDecode(response.body);
         String feedback = responseData['feedback'] ?? "No feedback received";
         setState(() {
-          _chatMessages[_loadingMessageIndex!] = {
-            'type': 'feedback',
-            'sender': 'bot',
-            'message': feedback
-          };
+          _feedback = feedback;
         });
         return true;
       } else {
-        print('Failed to get response from server: ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      print('Exception while sending answer to backend: $e');
       return false;
     }
   }
 
   void _showNextQuestion() {
+    FocusScope.of(context).unfocus();
     setState(() {
       _currentQuestionIndex = (_currentQuestionIndex + 1) % _questions.length;
-      _chatMessages.add({
-        'no': '${_currentQuestionIndex + 1}',
-        'type': 'question',
-        'sender': 'bot',
-        'message': _questions[_currentQuestionIndex]['Question']
-      });
-      _answered = false; // Reset the answered state for the new question
-      _showNextButton = false; // Hide next button for the new question
-      _scrollToBottom();
-    });
-  }
-
-  void _scrollToBottom() {
-    Future.delayed(Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      _answered = false;
+      _feedback = '';
+      _answerController.clear();
     });
   }
 
   void _initSpeech() async {
-    _speechEnabled = await _speechToText.initialize();
+    _speechEnabled = await _speechToText.initialize(
+      onStatus: _onSpeechStatus,
+    );
     setState(() {});
   }
 
   void _startListening() async {
     await _speechToText.listen(
       onResult: _onSpeechResult,
-      // listenFor: Duration(seconds: 10),
+      // onStatus: _onSpeechStatus,
     );
     setState(() {});
   }
@@ -173,158 +136,260 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   void _onSpeechResult(SpeechRecognitionResult result) {
     setState(() {
       _lastWords = result.recognizedWords;
-      _answerController.text =
-          _lastWords; 
+      _answerController.text = _lastWords;
     });
+  }
+
+  void _onSpeechStatus(String status) {
+    if (status == 'notListening') {
+      print("aaaaaaaaaaaa");
+      setState(() {
+        _answered = true;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('ChatBot'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.all(8.0),
-              itemCount: _chatMessages.length,
-              itemBuilder: (context, index) {
-                final message = _chatMessages[index];
-                final isUser = message['sender'] == 'user';
-                final isLoading = _loading && index == _loadingMessageIndex;
-
-                return Column(
-                  children: [
-                    Align(
-                      alignment:
-                          isUser ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 5.0),
-                        padding: const EdgeInsets.all(10.0),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(
+                height: 100,
+              ),
+              Column(
+                children: [
+                  Text(
+                    'Question ${_currentQuestionIndex + 1}',
+                    style: TextStyle(
+                      fontSize: 24.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 20.0),
+                  Text(
+                    _questions.isNotEmpty
+                        ? _questions[_currentQuestionIndex]['Question']
+                        : 'Loading question...',
+                    style: TextStyle(fontSize: 18.0),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (!_answered)
+                    Column(
+                      children: [
+                        const SizedBox(
+                          height: 200,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20.0),
+                          child: Column(
+                            children: [
+                              if (_speechToText.isListening)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: Text(
+                                    _lastWords,
+                                    style: TextStyle(fontSize: 16.0),
+                                  ),
+                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 50,
+                                  ),
+                                  Container(
+                                    width: 120.0,
+                                    height: 120.0,
+                                    decoration: BoxDecoration(
+                                      color: Colors.amberAccent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: IconButton(
+                                      iconSize: 50.0,
+                                      icon: Icon(
+                                          _speechToText.isListening
+                                              ? Icons.mic
+                                              : Icons.mic_none_sharp,
+                                          color: Colors.grey[700]),
+                                      onPressed: () {
+                                        if (_speechToText.isListening) {
+                                          _stopListening();
+                                        } else {
+                                          _startListening();
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: 20.0),
+                                  Transform.translate(
+                                    offset: Offset(0, -50),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.amberAccent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: IconButton(
+                                        icon: Icon(
+                                            _showHint
+                                                ? Icons.lightbulb
+                                                : Icons.lightbulb_outline,
+                                            color: Colors.grey[700]),
+                                        onPressed: () {
+                                          setState(() {
+                                            _showHint = !_showHint;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (_loading)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  if (_answered && _feedback.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10.0),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+                              padding: EdgeInsets.all(8.0),
+                              child: Text(
+                                _answerController.text,
+                                style: TextStyle(
+                                    fontSize: 16.0, color: Colors.black),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10.0),
+                            child: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color.fromARGB(255, 236, 194, 208),
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+                              child: Text(
+                                _feedback,
+                                style: TextStyle(
+                                    fontSize: 16.0, color: Colors.black),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                ],
+              ),
+              if (_answered && _feedback == '')
+                Container(
+                  margin: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 236, 181, 200),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        margin:
+                            const EdgeInsets.only(right: 5, left: 5, top: 18),
+                        padding: const EdgeInsets.only(left: 8.0, right: 8.0),
                         decoration: BoxDecoration(
-                          color: isUser ? Colors.blue[100] : Colors.grey[300],
+                          color: Colors.grey[200],
                           borderRadius: BorderRadius.circular(10.0),
                         ),
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(),
-                              )
-                            : message['type'] != 'question'
-                                ? Text(
-                                    message['message']!,
-                                    style: const TextStyle(fontSize: 16.0),
-                                  )
-                                : Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Question ${message['no']}:\n',
-                                          style: const TextStyle(
-                                              fontSize: 16.0,
-                                              fontWeight: FontWeight.bold)),
-                                      Text(
-                                        message['message']!,
-                                        style: const TextStyle(fontSize: 16.0),
-                                      )
-                                    ],
-                                  ),
-                      ),
-                    ),
-                    // if (index < _chatMessages.length - 1)
-                    //   Divider(color: Colors.grey),
-                  ],
-                );
-              },
-            ),
-          ),
-          if (_showNextButton)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ElevatedButton(
-                onPressed: _showNextQuestion,
-                child: Text('Next'),
-              ),
-            ),
-          if (_showHint)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                _questions[_currentQuestionIndex]['Hint'],
-                style:
-                    TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      TextField(
-                        controller: _answerController,
-                        decoration: InputDecoration(
-                          hintText: 'Type your answer here...',
-                          border: OutlineInputBorder(),
-                        ),
-                        enabled: !_answered && !_speechToText.isListening,
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          icon: _speechToText.isNotListening
-                              ? Icon(Icons.mic_off)
-                              : Icon(Icons.mic),
-                          onPressed: () {
-                            print("aaaaaaaaaaaaaaa");
-                            if (_speechToText.isListening) {
-                              _stopListening();
-                            } else {
-                              _startListening();
-                            }
-                          },
+                        child: TextField(
+                          controller: _answerController,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                          ),
+                          enabled: _answered,
                         ),
                       ),
+                      SizedBox(height: 15.0),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                          ),
+                          Container(
+                            width: 50.0,
+                            height: 50.0,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              iconSize: 30.0,
+                              icon: Icon(
+                                  _speechToText.isListening
+                                      ? Icons.mic
+                                      : Icons.mic_none_sharp,
+                                  color: Colors.grey[700]),
+                              onPressed: () {
+                                if (_speechToText.isListening) {
+                                  _stopListening();
+                                } else {
+                                  _startListening();
+                                }
+                              },
+                            ),
+                          ),
+                          Spacer(),
+                          IconButton(
+                            icon: Icon(Icons.send),
+                            onPressed: !_answered
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _answered = true;
+                                    });
+                                    _checkAnswer(
+                                      _answerController.text,
+                                      _questions[_currentQuestionIndex]
+                                          ['Answer'],
+                                    );
+                                  },
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 15.0),
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.help_outline),
-                  onPressed: () {
-                    setState(() {
-                      _showHint = !_showHint;
-                    });
-                    _scrollToBottom();
-                  },
+              if (_feedback != '')
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20.0),
+                  child: ElevatedButton(
+                    onPressed: _showNextQuestion,
+                    child: Text('Next'),
+                  ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: _answered
-                      ? null
-                      : () {
-                          setState(() {
-                            _chatMessages.add({
-                              'type': 'answer',
-                              'sender': 'user',
-                              'message': _answerController.text,
-                            });
-                            _answerController.clear();
-                          });
-                          _checkAnswer(
-                            _chatMessages.last['message']!,
-                            _questions[_currentQuestionIndex]['Answer'],
-                          );
-                        },
-                ),
-              ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
