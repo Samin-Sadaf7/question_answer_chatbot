@@ -1,0 +1,55 @@
+{
+    "Topic": "heart sound",
+    "Questions": [
+        {
+            "Question": "What is the normal heart rate?",
+            "Hint": "The normal heart rate is the number of times the heart beats per minute and is influenced by age, activity level, and fitness level.",
+            "Answer": "The normal heart rate is between 60 and 100 beats per minute (bpm)."
+        },
+        {
+            "Question": "What is the difference between a heart murmur and a heart bruit?",
+            "Hint": "A murmur is a sound made by turbulence in blood flow, whereas a bruit is a sound made by turbulence in air flow.",
+            "Answer": "A heart murmur is a sound made by turbulent blood flow in the heart or major blood vessels, while a heart bruit is a sound made by turbulent air flow in the heart or major blood vessels."
+        },
+        {
+            "Question": "What is the clinical significance of a third heart sound?",
+            "Hint": "A third heart sound is often a sign of congestive heart failure.",
+            "Answer": "A third heart sound (S3) is a low-pitched sound that occurs in early diastole. It is often a sign of congestive heart failure."
+        },
+        {
+            "Question": "What is the cause of a pericardial friction rub?",
+            "Hint": "A pericardial friction rub is caused by inflammation or scarring of the pericardium.",
+            "Answer": "A pericardial friction rub is a scratching or grating sound that occurs during systole and diastole. It is caused by inflammation or scarring of the pericardium."
+        },
+        {
+            "Question": "What is the difference between a systolic and a diastolic murmur?",
+            "Hint": "A systolic murmur occurs during systole, while a diastolic murmur occurs during diastole.",
+            "Answer": "A systolic murmur occurs during systole (when the heart is contracting) and is typically caused by blood flowing through a narrowed valve or a hole in the heart. A diastolic murmur occurs during diastole (when the heart is relaxing) and is typically caused by blood flowing back through a leaky valve."
+        },
+        {
+            "Question": "What is the clinical significance of a pansystolic murmur?",
+            "Hint": "A pansystolic murmur is often a sign of mitral regurgitation.",
+            "Answer": "A pansystolic murmur is a murmur that occurs throughout systole and is often a sign of mitral regurgitation (a condition in which the mitral valve leaks)."
+        },
+        {
+            "Question": "What is the cause of a midsystolic click?",
+            "Hint": "A midsystolic click is often caused by mitral valve prolapse.",
+            "Answer": "A midsystolic click is a high-pitched sound that occurs in mid-systole and is often caused by mitral valve prolapse (a condition in which the mitral valve leaflets bulge into the left atrium during systole)."
+        },
+        {
+            "Question": "What is the clinical significance of an opening snap?",
+            "Hint": "An opening snap is often a sign of mitral stenosis.",
+            "Answer": "An opening snap is a high-pitched sound that occurs at the beginning of diastole and is often a sign of mitral stenosis (a condition in which the mitral valve is narrowed)."
+        },
+        {
+            "Question": "What is the cause of a Carey Coombs murmur?",
+            "Hint": "A Carey Coombs murmur is a diastolic murmur that is caused by the flow of blood across an incompetent aortic valve.",
+            "Answer": "A Carey Coombs murmur is a diastolic murmur that is heard best along the left sternal border and is caused by the flow of blood across an incompetent aortic valve."
+        },
+        {
+            "Question": "What is the clinical significance of a Graham Steell murmur?",
+            "Hint": "A Graham Steell murmur is a diastolic murmur that is caused by the flow of blood across an incompetent pulmonary valve.",
+            "Answer": "A Graham Steell murmur is a diastolic murmur that is heard best along the left sternal border and is caused by the flow of blood across an incompetent pulmonic valve."
+        }
+    ]
+}
